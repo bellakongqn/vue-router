@@ -3,16 +3,15 @@ import VueRouter from 'vue-router'
 
 Vue.use(VueRouter)
 
-const Home = { template: '<div class="home">home</div>' }
-const Foo = { template: '<div class="foo">foo</div>' }
+const Home = { template: '<div>home</div>' }
+const Foo = { template: '<div>foo</div>' }
 const Bar = {
   template: `
-    <div class="bar">
+    <div>
       bar
-      <div style="height:1500px"></div>
+      <div style="height:500px"></div>
       <p id="anchor" style="height:500px">Anchor</p>
-      <p id="anchor2" style="height:500px">Anchor2</p>
-      <p id="1number">with number</p>
+      <p id="anchor2">Anchor2</p>
     </div>
   `
 }
@@ -21,54 +20,43 @@ const Bar = {
 // - only available in html5 history mode
 // - defaults to no scroll behavior
 // - return false to prevent scroll
-const scrollBehavior = function (to, from, savedPosition) {
+const scrollBehavior = (to, from, savedPosition) => {
+  // { x: number, y: number }
+  // { selector: string, offset? : { x: number, y: number }} (offset 只在 2.6.0+ 支持)
+  // return { x: 0, y: 0 }如果返回一个 falsy (译者注：falsy 不是 false，
+  // 参考这里)的值，或者是一个空对象，那么不会发生滚动。
   if (savedPosition) {
+    // 第三个参数 savedPosition 当且仅当 popstate 导航 (通过浏览器的 前进/后退 按钮触发) 时才可用。
     // savedPosition is only available for popstate navigations.
     return savedPosition
   } else {
     const position = {}
-
+    // new navigation.
     // scroll to anchor by returning the selector
     if (to.hash) {
       position.selector = to.hash
+      console.log(to)
 
       // specify offset of the element
       if (to.hash === '#anchor2') {
         position.offset = { y: 100 }
       }
-
-      // bypass #1number check
-      if (/^#\d/.test(to.hash) || document.querySelector(to.hash)) {
-        return position
-      }
-
-      // if the returned position is falsy or an empty object,
-      // will retain current scroll position.
-      return false
     }
-
-    return new Promise(resolve => {
-      // check if any matched route config has meta that requires scrolling to top
-      if (to.matched.some(m => m.meta.scrollToTop)) {
-        // coords will be used if no selector is provided,
-        // or if the selector didn't match any element.
-        position.x = 0
-        position.y = 0
-      }
-
-      // wait for the out transition to complete (if necessary)
-      this.app.$root.$once('triggerScroll', () => {
-        // if the resolved position is falsy or an empty object,
-        // will retain current scroll position.
-        resolve(position)
-      })
-    })
+    // check if any matched route config has meta that requires scrolling to top
+    if (to.matched.some(m => m.meta.scrollToTop)) {
+      // cords will be used if no selector is provided,
+      // or if the selector didn't match any element.
+      position.x = 0
+      position.y = 0
+    }
+    // if the returned position is falsy or an empty object,
+    // will retain current scroll position.
+    return position
   }
 }
 
 const router = new VueRouter({
-  mode: 'history',
-  base: __dirname,
+  mode: 'hash',
   scrollBehavior,
   routes: [
     { path: '/', component: Home, meta: { scrollToTop: true }},
@@ -88,16 +76,9 @@ new Vue({
         <li><router-link to="/bar">/bar</router-link></li>
         <li><router-link to="/bar#anchor">/bar#anchor</router-link></li>
         <li><router-link to="/bar#anchor2">/bar#anchor2</router-link></li>
-        <li><router-link to="/bar#1number">/bar#1number</router-link></li>
       </ul>
-      <transition name="fade" mode="out-in" @after-leave="afterLeave">
-        <router-view class="view"></router-view>
-      </transition>
+      <router-view class="view"></router-view>
     </div>
-  `,
-  methods: {
-    afterLeave () {
-      this.$root.$emit('triggerScroll')
-    }
-  }
+  `
 }).$mount('#app')
+
